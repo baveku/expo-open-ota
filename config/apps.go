@@ -98,10 +98,7 @@ var (
 func LoadApps() error {
 	apps, source, err := readApps()
 	if err != nil {
-		return err
-	}
-	if len(apps) == 0 {
-		return fmt.Errorf("%s: must declare at least one app", source)
+		apps = []AppConfig{} // Don't crash if no apps found
 	}
 	index := make(map[string]*AppConfig, len(apps))
 	for i := range apps {
@@ -125,6 +122,12 @@ func LoadApps() error {
 // set. The flat-env fallback reads legacy v1 variable names verbatim to
 // preserve upgrade-in-place.
 func readApps() ([]AppConfig, string, error) {
+	if data, err := os.ReadFile("apps.json"); err == nil {
+		var apps []AppConfig
+		if err := json.Unmarshal(data, &apps); err == nil {
+			return apps, "apps.json", nil
+		}
+	}
 	if inline := strings.TrimSpace(os.Getenv("EXPO_APPS_JSON")); inline != "" {
 		var apps []AppConfig
 		if err := json.Unmarshal([]byte(inline), &apps); err != nil {
@@ -135,7 +138,7 @@ func readApps() ([]AppConfig, string, error) {
 	if appId := strings.TrimSpace(os.Getenv("EXPO_APP_ID")); appId != "" {
 		return []AppConfig{loadFromFlatEnv(appId)}, "flat env (EXPO_APP_ID)", nil
 	}
-	return nil, "", fmt.Errorf("no apps config found: set EXPO_APPS_JSON for multi-app, or EXPO_APP_ID + EXPO_ACCESS_TOKEN + key vars for the single-app case")
+	return nil, "", fmt.Errorf("no apps config found")
 }
 
 // loadFromFlatEnv reads the v1 single-app env vars and returns an AppConfig.
@@ -328,4 +331,53 @@ func ResetAppsForTest() {
 	appsByIdMu.Lock()
 	appsById = nil
 	appsByIdMu.Unlock()
+}
+
+func SaveApp(app AppConfig) error {
+	if err := validateApp(&app, 0); err != nil {
+		return err
+	}
+	appsByIdMu.Lock()
+	defer appsByIdMu.Unlock()
+	
+	if appsById == nil {
+		appsById = make(map[string]*AppConfig)
+	}
+	appsById[app.Id] = &app
+	
+	var apps []AppConfig
+	for _, a := range appsById {
+		apps = append(apps, *a)
+	}
+	
+	data, err := json.MarshalIndent(apps, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile("apps.json", data, 0644)
+}
+
+func DeleteApp(appId string) error {
+	appsByIdMu.Lock()
+	defer appsByIdMu.Unlock()
+
+	if appsById == nil {
+		return nil
+	}
+	if _, exists := appsById[appId]; !exists {
+		return fmt.Errorf("app not found: %s", appId)
+	}
+
+	delete(appsById, appId)
+
+	var apps []AppConfig
+	for _, a := range appsById {
+		apps = append(apps, *a)
+	}
+
+	data, err := json.MarshalIndent(apps, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile("apps.json", data, 0644)
 }

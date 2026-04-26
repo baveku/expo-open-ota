@@ -27,7 +27,7 @@ func getDashboardPath() string {
 	}
 	exeDir := filepath.Dir(exePath)
 
-	if strings.Contains(exePath, "/var/folders/") || strings.Contains(exePath, "Temp") {
+	if strings.Contains(exePath, "/var/folders/") || strings.Contains(exePath, "Temp") || strings.HasPrefix(exePath, "/tmp/") {
 		workingDir, _ := os.Getwd()
 		return filepath.Join(workingDir, "apps", "dashboard", "dist")
 	}
@@ -103,6 +103,8 @@ func NewRouter() *mux.Router {
 	authSubrouter := r.PathPrefix("/api").Subrouter()
 	authSubrouter.Use(middleware.AuthMiddleware)
 	authSubrouter.HandleFunc("/settings", handlers.GetSettingsHandler).Methods(http.MethodGet)
+	authSubrouter.HandleFunc("/apps", handlers.CreateAppHandler).Methods(http.MethodPost)
+	authSubrouter.HandleFunc("/apps/{APP_ID}", handlers.DeleteAppHandler).Methods(http.MethodDelete)
 
 	// App-scoped dashboard routes: Auth first, then AppResolver validates the
 	// id and short-circuits unknown apps with 404 before handlers run. Without

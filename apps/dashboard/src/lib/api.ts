@@ -196,6 +196,20 @@ export class ApiClient {
       method: 'GET',
     });
   }
+
+  public async createApp(payload: { id: string; name: string; accessToken: string }) {
+    return this.request<{ id: string; name: string }>(`/api/apps`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  public async deleteApp(appId: string) {
+    return this.request(`/api/apps/${encodeURIComponent(appId)}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 export const api = new ApiClient();

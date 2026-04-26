@@ -11,15 +11,20 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { Box, HardDriveDownload, PowerOff, Settings } from 'lucide-react';
+import { Box, HardDriveDownload, PowerOff, Settings, AppWindow } from 'lucide-react';
 import clsx from 'clsx';
 import { Combobox } from '@/components/Combobox';
 import { useSelectedApp } from '@/lib/SelectedAppContext';
 
 const items = [
   {
-    title: 'Updates',
+    title: 'Apps',
     url: '/',
+    icon: AppWindow,
+  },
+  {
+    title: 'Updates',
+    url: '/updates',
     icon: HardDriveDownload,
   },
   {
